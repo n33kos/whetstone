@@ -1,0 +1,216 @@
+# Whetstone source library
+# Canonical books, papers, and online references the catalog cites.
+# Topics in topics.yml reference these by `id`.
+
+sources:
+  - id: gof
+    title: "Design Patterns: Elements of Reusable Object-Oriented Software"
+    authors: ["Erich Gamma", "Richard Helm", "Ralph Johnson", "John Vlissides"]
+    year: 1994
+    kind: book
+
+  - id: peaa
+    title: "Patterns of Enterprise Application Architecture"
+    authors: ["Martin Fowler"]
+    year: 2002
+    kind: book
+
+  - id: ddia
+    title: "Designing Data-Intensive Applications"
+    authors: ["Martin Kleppmann"]
+    year: 2017
+    kind: book
+
+  - id: refactoring
+    title: "Refactoring: Improving the Design of Existing Code (2nd ed.)"
+    authors: ["Martin Fowler"]
+    year: 2018
+    kind: book
+
+  - id: clean-code
+    title: "Clean Code: A Handbook of Agile Software Craftsmanship"
+    authors: ["Robert C. Martin"]
+    year: 2008
+    kind: book
+
+  - id: dddesign
+    title: "Domain-Driven Design: Tackling Complexity in the Heart of Software"
+    authors: ["Eric Evans"]
+    year: 2003
+    kind: book
+
+  - id: implementing-ddd
+    title: "Implementing Domain-Driven Design"
+    authors: ["Vaughn Vernon"]
+    year: 2013
+    kind: book
+
+  - id: release-it
+    title: "Release It! Design and Deploy Production-Ready Software (2nd ed.)"
+    authors: ["Michael Nygard"]
+    year: 2018
+    kind: book
+
+  - id: sre-book
+    title: "Site Reliability Engineering"
+    authors: ["Google SRE team"]
+    year: 2016
+    kind: book
+    url: "https://sre.google/sre-book/"
+
+  - id: cltm
+    title: "The Art of Multiprocessor Programming (2nd ed.)"
+    authors: ["Maurice Herlihy", "Nir Shavit"]
+    year: 2020
+    kind: book
+
+  - id: tcpip-illustrated
+    title: "TCP/IP Illustrated, Volume 1 (2nd ed.)"
+    authors: ["Kevin R. Fall", "W. Richard Stevens"]
+    year: 2011
+    kind: book
+
+  - id: cracking-coding
+    title: "Cracking the Coding Interview (6th ed.)"
+    authors: ["Gayle Laakmann McDowell"]
+    year: 2015
+    kind: book
+
+  - id: clrs
+    title: "Introduction to Algorithms (4th ed.)"
+    authors: ["Cormen", "Leiserson", "Rivest", "Stein"]
+    year: 2022
+    kind: book
+
+  - id: tapl
+    title: "Types and Programming Languages"
+    authors: ["Benjamin C. Pierce"]
+    year: 2002
+    kind: book
+
+  - id: poodr
+    title: "Practical Object-Oriented Design in Ruby"
+    authors: ["Sandi Metz"]
+    year: 2018
+    kind: book
+
+  - id: xunit-patterns
+    title: "xUnit Test Patterns: Refactoring Test Code"
+    authors: ["Gerard Meszaros"]
+    year: 2007
+    kind: book
+
+  # Papers
+  - id: paxos-simple
+    title: "Paxos Made Simple"
+    authors: ["Leslie Lamport"]
+    year: 2001
+    kind: paper
+    url: "https://lamport.azurewebsites.net/pubs/paxos-simple.pdf"
+
+  - id: raft-paper
+    title: "In Search of an Understandable Consensus Algorithm (Raft)"
+    authors: ["Diego Ongaro", "John Ousterhout"]
+    year: 2014
+    kind: paper
+    url: "https://raft.github.io/raft.pdf"
+
+  - id: dynamo-paper
+    title: "Dynamo: Amazon's Highly Available Key-value Store"
+    authors: ["Giuseppe DeCandia", "et al."]
+    year: 2007
+    kind: paper
+
+  - id: spanner-paper
+    title: "Spanner: Google's Globally-Distributed Database"
+    authors: ["Corbett", "et al."]
+    year: 2012
+    kind: paper
+
+  - id: bigtable-paper
+    title: "Bigtable: A Distributed Storage System for Structured Data"
+    authors: ["Chang", "et al."]
+    year: 2006
+    kind: paper
+
+  - id: mapreduce-paper
+    title: "MapReduce: Simplified Data Processing on Large Clusters"
+    authors: ["Dean", "Ghemawat"]
+    year: 2004
+    kind: paper
+
+  - id: lamport-clocks
+    title: "Time, Clocks, and the Ordering of Events in a Distributed System"
+    authors: ["Leslie Lamport"]
+    year: 1978
+    kind: paper
+
+  - id: cap-twelve-years
+    title: "CAP Twelve Years Later: How the 'Rules' Have Changed"
+    authors: ["Eric Brewer"]
+    year: 2012
+    kind: paper
+
+  - id: harvest-yield
+    title: "Harvest, Yield, and Scalable Tolerant Systems"
+    authors: ["Armando Fox", "Eric Brewer"]
+    year: 1999
+    kind: paper
+
+  - id: end-to-end-args
+    title: "End-to-End Arguments in System Design"
+    authors: ["Saltzer", "Reed", "Clark"]
+    year: 1984
+    kind: paper
+
+  - id: stride-paper
+    title: "STRIDE: A Threat-Modeling Methodology"
+    authors: ["Microsoft"]
+    year: 1999
+    kind: paper
+
+  # Online references
+  - id: refactoring-guru
+    title: "Refactoring.Guru — Design Patterns"
+    kind: web
+    url: "https://refactoring.guru/design-patterns"
+
+  - id: martin-fowler-bliki
+    title: "Martin Fowler's bliki"
+    kind: web
+    url: "https://martinfowler.com/bliki/"
+
+  - id: aws-arch-patterns
+    title: "AWS Architecture Patterns (Cloud Design Patterns)"
+    kind: web
+    url: "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/"
+
+  - id: azure-cloud-patterns
+    title: "Cloud Design Patterns (Azure Architecture Center)"
+    kind: web
+    url: "https://learn.microsoft.com/en-us/azure/architecture/patterns/"
+
+  - id: mdn
+    title: "MDN Web Docs"
+    kind: web
+    url: "https://developer.mozilla.org/"
+
+  - id: rfc7234
+    title: "RFC 7234 — HTTP Caching"
+    kind: rfc
+    url: "https://datatracker.ietf.org/doc/html/rfc7234"
+
+  - id: rfc9110
+    title: "RFC 9110 — HTTP Semantics"
+    kind: rfc
+    url: "https://datatracker.ietf.org/doc/html/rfc9110"
+
+  - id: rfc6749
+    title: "RFC 6749 — The OAuth 2.0 Authorization Framework"
+    kind: rfc
+    url: "https://datatracker.ietf.org/doc/html/rfc6749"
+
+  - id: owasp-top-10
+    title: "OWASP Top 10"
+    kind: web
+    url: "https://owasp.org/www-project-top-ten/"

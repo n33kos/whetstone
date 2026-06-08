@@ -1,0 +1,1240 @@
+# Whetstone catalog of topics
+#
+# Each topic is the seed of a lesson — five to ten lines of YAML the planner
+# uses to pick what to teach today. Detailed lesson content is generated at
+# lesson-time, not pre-authored.
+#
+# Schema (one entry):
+#   id:               kebab-case stable identifier (used in knowledge-map.yml)
+#   title:            human title shown in lesson header
+#   section:          top-level catalog section (used for "unvisited region" exploration)
+#   summary:          one-line description
+#   prereqs:          list of topic ids the user should be comfy with first (optional)
+#   related:          list of topic ids that often co-occur (optional)
+#   sources:          list of source ids from sources.yml
+#   languages:        list of language slugs this topic works well in (default: any)
+#                     valid: typescript, ruby, any
+#   tags:             optional free-form tags (theory, hands-on, classic, modern, etc.)
+
+topics:
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Language fundamentals
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: structural-vs-nominal-types
+    title: "Structural vs nominal type systems"
+    section: language-fundamentals
+    summary: "Why TypeScript's `{name: string}` matches anything with that shape, and what nominal typing buys you."
+    related: [variance, branded-types, parametricity]
+    sources: [tapl]
+    languages: [typescript]
+    tags: [theory, type-systems]
+
+  - id: variance
+    title: "Variance: covariance, contravariance, bivariance, invariance"
+    section: language-fundamentals
+    summary: "Why `Array<Dog>` is not safely an `Array<Animal>`, and what TypeScript's `--strictFunctionTypes` actually does."
+    prereqs: [structural-vs-nominal-types]
+    sources: [tapl]
+    languages: [typescript]
+    tags: [theory, type-systems]
+
+  - id: parametricity
+    title: "Parametricity and free theorems"
+    section: language-fundamentals
+    summary: "What you can deduce from a polymorphic type signature alone — Reynolds' insight."
+    sources: [tapl]
+    languages: [typescript]
+    tags: [theory, type-systems]
+
+  - id: branded-types
+    title: "Branded / opaque types in TypeScript"
+    section: language-fundamentals
+    summary: "Making `UserId` and `OrderId` not assignable to each other in a structural system."
+    prereqs: [structural-vs-nominal-types]
+    languages: [typescript]
+    tags: [hands-on, type-systems]
+
+  - id: discriminated-unions
+    title: "Discriminated unions and exhaustiveness checking"
+    section: language-fundamentals
+    summary: "Tagged unions, `never`-based exhaustiveness, and why sum types beat boolean flags."
+    languages: [typescript]
+    tags: [hands-on, type-systems]
+
+  - id: ts-conditional-types
+    title: "Conditional types and `infer`"
+    section: language-fundamentals
+    summary: "Type-level if/else and pattern matching — the engine behind `ReturnType`, `Awaited`, `Parameters`."
+    prereqs: [discriminated-unions]
+    languages: [typescript]
+    tags: [hands-on, type-systems, advanced]
+
+  - id: ts-mapped-types
+    title: "Mapped types and key remapping"
+    section: language-fundamentals
+    summary: "How `Partial`, `Readonly`, `Pick`, `Omit` are built — and how to write your own."
+    languages: [typescript]
+    tags: [hands-on, type-systems]
+
+  - id: ts-template-literal-types
+    title: "Template literal types"
+    section: language-fundamentals
+    summary: "Computing strings at the type level — route typing, CSS-in-JS keys, event names."
+    prereqs: [ts-mapped-types]
+    languages: [typescript]
+    tags: [hands-on, advanced]
+
+  - id: js-event-loop
+    title: "The JavaScript event loop, macrotasks, and microtasks"
+    section: language-fundamentals
+    summary: "Why `Promise.resolve().then(...)` runs before `setTimeout(..., 0)`."
+    languages: [typescript]
+    tags: [hands-on, async]
+
+  - id: promises-internals
+    title: "Promise internals — states, fates, and the resolution procedure"
+    section: language-fundamentals
+    summary: "What `then` actually does — Promises/A+, thenables, and the unwrap rules."
+    prereqs: [js-event-loop]
+    languages: [typescript]
+    tags: [hands-on, async]
+
+  - id: async-iterators
+    title: "Async iterators and `for-await-of`"
+    section: language-fundamentals
+    summary: "Streaming results lazily without buffering — Node streams, paginated APIs, server-sent events."
+    prereqs: [promises-internals]
+    languages: [typescript]
+    tags: [hands-on, async]
+
+  - id: generators-coroutines
+    title: "Generators and coroutines"
+    section: language-fundamentals
+    summary: "Suspending and resuming execution — the building block under async/await and many state machines."
+    languages: [typescript, ruby]
+    tags: [hands-on]
+
+  - id: closures-and-capture
+    title: "Closures and what gets captured"
+    section: language-fundamentals
+    summary: "Lexical scope, the closure-over-loop-var classic, and why this matters in async code."
+    languages: [typescript, ruby]
+    tags: [hands-on, classic]
+
+  - id: ruby-blocks-procs-lambdas
+    title: "Ruby blocks, procs, lambdas — the three closure flavors"
+    section: language-fundamentals
+    summary: "Arity rules, return semantics, and when each is the right tool."
+    languages: [ruby]
+    tags: [hands-on]
+
+  - id: ruby-method-missing-and-respond-to
+    title: "Ruby's `method_missing` and `respond_to_missing?`"
+    section: language-fundamentals
+    summary: "The dynamic dispatch hook behind every DSL — and the etiquette of using it well."
+    languages: [ruby]
+    tags: [hands-on, classic]
+
+  - id: ruby-modules-mixins
+    title: "Ruby modules, mixins, and the ancestor chain"
+    section: language-fundamentals
+    summary: "Where method lookup actually happens — `include`, `extend`, `prepend`, and `Module#ancestors`."
+    languages: [ruby]
+    tags: [hands-on]
+
+  - id: error-handling-paradigms
+    title: "Error handling paradigms: exceptions vs result types vs error returns"
+    section: language-fundamentals
+    summary: "When each model wins — and why TypeScript's `Result<T, E>` libraries keep being reinvented."
+    sources: [clean-code]
+    languages: [typescript, ruby]
+    tags: [theory, hands-on]
+
+  - id: memory-models
+    title: "Memory models — heap, stack, GC, escape analysis"
+    section: language-fundamentals
+    summary: "What allocates where, what gets reclaimed, and what an escape-analyzing JIT can keep on the stack."
+    languages: [typescript, ruby]
+    tags: [theory]
+
+  - id: tail-calls-and-recursion
+    title: "Tail calls, mutual recursion, and trampolining"
+    section: language-fundamentals
+    summary: "Why deep recursion blows the stack in most runtimes — and the trampoline pattern that fixes it."
+    languages: [typescript, ruby]
+    tags: [hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Data structures + algorithmic complexity
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: big-o-fundamentals
+    title: "Big-O, big-θ, big-Ω — and what 'amortized' really means"
+    section: data-structures
+    summary: "Worst case vs average case vs amortized — and why `Array.push` is O(1) even though it sometimes resizes."
+    sources: [clrs]
+    tags: [theory]
+
+  - id: arrays-vs-linked-lists
+    title: "Arrays vs linked lists — cache locality and the cost of indirection"
+    section: data-structures
+    summary: "Why linked lists are slower than their Big-O suggests in real CPUs."
+    prereqs: [big-o-fundamentals]
+    sources: [clrs]
+    tags: [theory, hands-on, classic]
+
+  - id: hash-tables
+    title: "Hash tables — separate chaining vs open addressing"
+    section: data-structures
+    summary: "Load factor, resizing, and why hash quality matters more than table size."
+    sources: [clrs]
+    tags: [theory, hands-on]
+
+  - id: binary-search-trees
+    title: "BSTs and self-balancing trees (AVL, red-black)"
+    section: data-structures
+    summary: "Why every map/set under the hood is one of these, and the invariants each enforces."
+    sources: [clrs]
+    tags: [theory]
+
+  - id: heaps-priority-queues
+    title: "Heaps and priority queues"
+    section: data-structures
+    summary: "Binary heap mechanics, heapify in O(n), and where Fibonacci heaps shine."
+    sources: [clrs]
+    tags: [theory, hands-on]
+
+  - id: tries
+    title: "Tries and radix trees"
+    section: data-structures
+    summary: "Prefix-shared lookup — autocomplete, routing tables, IP lookups."
+    sources: [clrs]
+    tags: [hands-on]
+
+  - id: bloom-filters
+    title: "Bloom filters and their cousins"
+    section: data-structures
+    summary: "Probabilistic membership, false positives only — and the cuckoo / quotient filter variants."
+    tags: [theory, hands-on]
+
+  - id: skip-lists
+    title: "Skip lists"
+    section: data-structures
+    summary: "Probabilistic balancing — the data structure behind Redis sorted sets and LevelDB memtables."
+    tags: [theory, hands-on]
+
+  - id: union-find
+    title: "Union-find / disjoint set union (DSU)"
+    section: data-structures
+    summary: "Path compression + union by rank — near-constant time for connectivity queries."
+    sources: [clrs]
+    tags: [hands-on]
+
+  - id: lru-caches
+    title: "LRU caches with hash + doubly-linked list"
+    section: data-structures
+    summary: "The classic O(1) get/put cache — and the LFU / TinyLFU variants that often beat it."
+    tags: [hands-on, classic]
+
+  - id: graph-traversal
+    title: "BFS, DFS, and when to reach for each"
+    section: data-structures
+    summary: "Shortest unweighted path, cycle detection, topological order."
+    sources: [clrs]
+    tags: [hands-on, classic]
+
+  - id: shortest-paths
+    title: "Dijkstra, Bellman-Ford, A*"
+    section: data-structures
+    summary: "Why Dijkstra fails on negative weights, and what heuristics make A* dominate."
+    prereqs: [graph-traversal, heaps-priority-queues]
+    sources: [clrs]
+    tags: [theory]
+
+  - id: dynamic-programming
+    title: "Dynamic programming — memoization, tabulation, state design"
+    section: data-structures
+    summary: "Naming the subproblem is most of the work."
+    sources: [clrs, cracking-coding]
+    tags: [hands-on, classic]
+
+  - id: sliding-window
+    title: "Sliding window technique"
+    section: data-structures
+    summary: "Two pointers, fixed-window and variable-window patterns — and the algorithms they collapse to O(n)."
+    tags: [hands-on, classic]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Object-oriented design
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: solid-srp
+    title: "SOLID: Single Responsibility Principle"
+    section: object-oriented-design
+    summary: "Reasons-to-change, not just methods-per-class."
+    sources: [clean-code, poodr]
+    tags: [theory]
+
+  - id: solid-ocp
+    title: "SOLID: Open/Closed Principle"
+    section: object-oriented-design
+    summary: "Extend behavior without editing existing code — the polymorphism payoff."
+    sources: [clean-code]
+    tags: [theory]
+
+  - id: solid-lsp
+    title: "SOLID: Liskov Substitution Principle"
+    section: object-oriented-design
+    summary: "Subtypes must honor their supertype's contract — pre-/post-conditions and the rectangle/square trap."
+    sources: [clean-code]
+    tags: [theory]
+
+  - id: solid-isp
+    title: "SOLID: Interface Segregation Principle"
+    section: object-oriented-design
+    summary: "Many small interfaces beat one fat one — clients shouldn't depend on methods they don't use."
+    sources: [clean-code]
+    tags: [theory]
+
+  - id: solid-dip
+    title: "SOLID: Dependency Inversion Principle"
+    section: object-oriented-design
+    summary: "High-level modules and low-level modules both depend on abstractions."
+    sources: [clean-code]
+    related: [dependency-injection]
+    tags: [theory]
+
+  - id: law-of-demeter
+    title: "Law of Demeter — talk only to your friends"
+    section: object-oriented-design
+    summary: "Why `a.b.c.d.do_thing()` is a smell and what to do about it."
+    sources: [poodr, clean-code]
+    tags: [theory, hands-on]
+
+  - id: composition-vs-inheritance
+    title: "Composition vs inheritance"
+    section: object-oriented-design
+    summary: "Favor composition — the GoF advice that holds up best."
+    sources: [gof, poodr]
+    tags: [theory, classic]
+
+  - id: cohesion-and-coupling
+    title: "Cohesion and coupling"
+    section: object-oriented-design
+    summary: "The two perpendicular axes every architect tunes — high cohesion within, low coupling between."
+    sources: [clean-code]
+    tags: [theory]
+
+  - id: tell-dont-ask
+    title: "Tell, don't ask"
+    section: object-oriented-design
+    summary: "Pushing behavior to the data that owns it — the small move that kills feature envy."
+    sources: [poodr]
+    tags: [theory]
+
+  - id: value-objects
+    title: "Value objects"
+    section: object-oriented-design
+    summary: "Equality by value, immutability, and why `Money` should never be a `float`."
+    sources: [dddesign, peaa]
+    tags: [hands-on, classic]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # GoF patterns — creational
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: gof-abstract-factory
+    title: "Abstract Factory pattern"
+    section: gof-patterns
+    summary: "Families of related objects without specifying their concrete classes."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-builder
+    title: "Builder pattern"
+    section: gof-patterns
+    summary: "Step-by-step construction of a complex object — and the fluent variant."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-factory-method
+    title: "Factory Method pattern"
+    section: gof-patterns
+    summary: "Let subclasses decide which class to instantiate."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-prototype
+    title: "Prototype pattern"
+    section: gof-patterns
+    summary: "Clone existing objects instead of newing them up."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-singleton
+    title: "Singleton pattern — and why people grew to hate it"
+    section: gof-patterns
+    summary: "One instance, global access, testability nightmare. Knowing the costs."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # GoF patterns — structural
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: gof-adapter
+    title: "Adapter pattern"
+    section: gof-patterns
+    summary: "Convert one interface into another the client expects."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-bridge
+    title: "Bridge pattern"
+    section: gof-patterns
+    summary: "Decouple abstraction from implementation so both vary independently."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-composite
+    title: "Composite pattern"
+    section: gof-patterns
+    summary: "Tree structures where leaves and branches share an interface."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-decorator
+    title: "Decorator pattern"
+    section: gof-patterns
+    summary: "Add behavior dynamically without subclassing."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-facade
+    title: "Facade pattern"
+    section: gof-patterns
+    summary: "A simpler interface in front of a complex subsystem."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-flyweight
+    title: "Flyweight pattern"
+    section: gof-patterns
+    summary: "Share fine-grained state to support huge numbers of similar objects."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-proxy
+    title: "Proxy pattern"
+    section: gof-patterns
+    summary: "Stand-in that controls access — lazy loading, remote calls, access control."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # GoF patterns — behavioral
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: gof-chain-of-responsibility
+    title: "Chain of Responsibility pattern"
+    section: gof-patterns
+    summary: "Pass a request along a chain until one handler claims it."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-command
+    title: "Command pattern"
+    section: gof-patterns
+    summary: "Encapsulate a request as an object — undo, queue, log, replay."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-interpreter
+    title: "Interpreter pattern"
+    section: gof-patterns
+    summary: "Evaluate sentences in a small domain language by walking an AST."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-iterator
+    title: "Iterator pattern"
+    section: gof-patterns
+    summary: "Sequential access without exposing internal representation."
+    sources: [gof, refactoring-guru]
+    related: [async-iterators, generators-coroutines]
+    tags: [classic]
+
+  - id: gof-mediator
+    title: "Mediator pattern"
+    section: gof-patterns
+    summary: "Centralize complex communications and control logic between objects."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-memento
+    title: "Memento pattern"
+    section: gof-patterns
+    summary: "Capture and externalize an object's state for later restoration."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-observer
+    title: "Observer pattern — and why pub/sub generalizes it"
+    section: gof-patterns
+    summary: "One-to-many dependency where state changes propagate automatically."
+    sources: [gof, refactoring-guru]
+    related: [event-driven-architecture]
+    tags: [classic, hands-on]
+
+  - id: gof-state
+    title: "State pattern"
+    section: gof-patterns
+    summary: "An object whose behavior changes when its internal state changes — feels like polymorphism on the state."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-strategy
+    title: "Strategy pattern"
+    section: gof-patterns
+    summary: "Define a family of algorithms and make them interchangeable."
+    sources: [gof, refactoring-guru]
+    tags: [classic, hands-on]
+
+  - id: gof-template-method
+    title: "Template Method pattern"
+    section: gof-patterns
+    summary: "Skeleton of an algorithm in a base class, steps overridden by subclasses."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  - id: gof-visitor
+    title: "Visitor pattern"
+    section: gof-patterns
+    summary: "Adding new operations to a class hierarchy without modifying it — the double dispatch trick."
+    sources: [gof, refactoring-guru]
+    tags: [classic]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Modern patterns
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: dependency-injection
+    title: "Dependency injection"
+    section: modern-patterns
+    summary: "Constructor injection vs setter injection vs DI containers — and when each is overkill."
+    related: [solid-dip]
+    sources: [peaa]
+    tags: [hands-on]
+
+  - id: repository-pattern
+    title: "Repository pattern"
+    section: modern-patterns
+    summary: "Collection-like interface over persistence — abstracting the data store."
+    sources: [peaa, implementing-ddd]
+    tags: [hands-on]
+
+  - id: unit-of-work
+    title: "Unit of Work pattern"
+    section: modern-patterns
+    summary: "Track changes during a business transaction and flush them as one atomic write."
+    sources: [peaa]
+    related: [repository-pattern]
+    tags: [hands-on]
+
+  - id: specification-pattern
+    title: "Specification pattern"
+    section: modern-patterns
+    summary: "Composable predicates that double as business rules and query filters."
+    sources: [implementing-ddd]
+    tags: [hands-on]
+
+  - id: anti-corruption-layer
+    title: "Anti-Corruption Layer"
+    section: modern-patterns
+    summary: "Translation layer that protects your domain model from a messy external one."
+    sources: [dddesign]
+    tags: [theory, hands-on]
+
+  - id: saga-pattern
+    title: "Saga pattern (orchestration vs choreography)"
+    section: modern-patterns
+    summary: "Long-running distributed transactions decomposed into local transactions with compensations."
+    sources: [aws-arch-patterns]
+    related: [outbox-pattern, idempotency]
+    tags: [hands-on]
+
+  - id: outbox-pattern
+    title: "Transactional Outbox pattern"
+    section: modern-patterns
+    summary: "Atomically write to the database and a message queue without two-phase commit."
+    sources: [aws-arch-patterns]
+    tags: [hands-on]
+
+  - id: idempotency
+    title: "Idempotency keys and idempotent operations"
+    section: modern-patterns
+    summary: "Why every retried payment request should land exactly once — and how to build that."
+    related: [outbox-pattern]
+    tags: [hands-on]
+
+  - id: hexagonal-architecture
+    title: "Hexagonal architecture (Ports and Adapters)"
+    section: modern-patterns
+    summary: "Pure domain in the center, IO at the edges — and the testability win."
+    sources: [martin-fowler-bliki]
+    tags: [theory, hands-on]
+
+  - id: cqrs
+    title: "CQRS — Command Query Responsibility Segregation"
+    section: modern-patterns
+    summary: "Separate read and write models — what it buys you, what it costs."
+    sources: [martin-fowler-bliki]
+    tags: [theory]
+
+  - id: event-sourcing
+    title: "Event sourcing"
+    section: modern-patterns
+    summary: "The log of state changes IS the state. Projections rebuild views."
+    sources: [martin-fowler-bliki, ddia]
+    tags: [theory]
+
+  - id: pipes-and-filters
+    title: "Pipes and Filters architecture"
+    section: modern-patterns
+    summary: "Compose processing as a chain of small, focused transformations."
+    sources: [aws-arch-patterns]
+    tags: [theory]
+
+  - id: sidecar-pattern
+    title: "Sidecar pattern"
+    section: modern-patterns
+    summary: "Cross-cutting concerns in a co-located process — logging, mTLS, service mesh proxies."
+    sources: [aws-arch-patterns]
+    tags: [hands-on]
+
+  - id: ambassador-pattern
+    title: "Ambassador pattern"
+    section: modern-patterns
+    summary: "A helper process that handles network requests on behalf of the application."
+    sources: [aws-arch-patterns]
+    tags: [hands-on]
+
+  - id: strangler-fig
+    title: "Strangler Fig pattern"
+    section: modern-patterns
+    summary: "Gradually replace a legacy system by routing new functionality around it."
+    sources: [martin-fowler-bliki]
+    tags: [theory, hands-on]
+
+  - id: feature-flags
+    title: "Feature flags as a release pattern"
+    section: modern-patterns
+    summary: "Decouple deploy from release — gradual rollout, instant rollback, experimentation."
+    related: [canary-deploys]
+    tags: [hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Architectural styles
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: monolith-vs-modular-monolith
+    title: "Monolith vs modular monolith"
+    section: architecture
+    summary: "The case for the modular monolith — and the failure modes of going microservice-first."
+    sources: [martin-fowler-bliki]
+    tags: [theory]
+
+  - id: microservices
+    title: "Microservices — what they buy you and what they cost"
+    section: architecture
+    summary: "Bounded contexts, independent deploys, and the operational tax."
+    sources: [martin-fowler-bliki]
+    related: [saga-pattern, service-discovery]
+    tags: [theory]
+
+  - id: serverless-architecture
+    title: "Serverless architecture"
+    section: architecture
+    summary: "FaaS economics, cold starts, and the design changes that follow."
+    tags: [theory]
+
+  - id: event-driven-architecture
+    title: "Event-driven architecture"
+    section: architecture
+    summary: "Loose coupling via events — and the debugging cost of async causal chains."
+    related: [gof-observer, saga-pattern]
+    tags: [theory]
+
+  - id: actor-model
+    title: "The actor model"
+    section: architecture
+    summary: "Erlang, Akka, Pony — message passing as the unit of concurrency."
+    tags: [theory]
+
+  - id: bounded-contexts
+    title: "Bounded contexts and context maps"
+    section: architecture
+    summary: "Where one ubiquitous language ends and another begins."
+    sources: [dddesign, implementing-ddd]
+    tags: [theory]
+
+  - id: ports-and-adapters-recap
+    title: "Onion / Clean / Hexagonal — what's actually different?"
+    section: architecture
+    summary: "Same core idea, different vocabularies — and what each emphasizes."
+    related: [hexagonal-architecture]
+    tags: [theory]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Distributed systems
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: cap-theorem
+    title: "CAP theorem — what it actually says"
+    section: distributed-systems
+    summary: "Why 'CP vs AP' is a partition-time choice, not a global database property."
+    sources: [cap-twelve-years, ddia]
+    tags: [theory, classic]
+
+  - id: pacelc
+    title: "PACELC — Daniel Abadi's refinement of CAP"
+    section: distributed-systems
+    summary: "Latency vs consistency in the absence of partitions, too."
+    prereqs: [cap-theorem]
+    sources: [ddia]
+    tags: [theory]
+
+  - id: consensus-paxos
+    title: "Paxos — the consensus algorithm you'll never implement from scratch"
+    section: distributed-systems
+    summary: "Proposers, acceptors, learners — and why Lamport had to write 'Paxos Made Simple'."
+    sources: [paxos-simple, ddia]
+    tags: [theory]
+
+  - id: consensus-raft
+    title: "Raft — consensus designed for understandability"
+    section: distributed-systems
+    summary: "Leader election, log replication, safety — etcd, Consul, CockroachDB."
+    sources: [raft-paper, ddia]
+    tags: [theory]
+
+  - id: leader-election
+    title: "Leader election"
+    section: distributed-systems
+    summary: "Bully algorithm, ring algorithm, and lease-based election in practice."
+    related: [consensus-raft]
+    sources: [ddia]
+    tags: [theory]
+
+  - id: consistent-hashing
+    title: "Consistent hashing"
+    section: distributed-systems
+    summary: "Minimizing remapping when nodes join or leave — and the virtual nodes refinement."
+    sources: [dynamo-paper, ddia]
+    tags: [theory, hands-on]
+
+  - id: vector-clocks
+    title: "Vector clocks"
+    section: distributed-systems
+    summary: "Capturing causality when wall-clock time isn't trustworthy."
+    sources: [dynamo-paper, ddia]
+    tags: [theory]
+
+  - id: lamport-timestamps
+    title: "Lamport timestamps"
+    section: distributed-systems
+    summary: "Logical clocks — a total order consistent with causality."
+    sources: [lamport-clocks, ddia]
+    tags: [theory, classic]
+
+  - id: gossip-protocols
+    title: "Gossip protocols"
+    section: distributed-systems
+    summary: "Epidemic dissemination — eventual consistency at planetary scale."
+    sources: [dynamo-paper, ddia]
+    tags: [theory]
+
+  - id: two-phase-commit
+    title: "Two-phase commit — and why it's a punchline"
+    section: distributed-systems
+    summary: "The blocking failure mode that makes 2PC hard to love."
+    sources: [ddia]
+    related: [saga-pattern]
+    tags: [theory, classic]
+
+  - id: lsm-trees
+    title: "Log-structured merge trees (LSM)"
+    section: distributed-systems
+    summary: "Write amplification vs read amplification — LevelDB, RocksDB, Cassandra, HBase."
+    sources: [bigtable-paper, ddia]
+    tags: [theory]
+
+  - id: append-only-logs
+    title: "Append-only logs as a primitive"
+    section: distributed-systems
+    summary: "Kafka, write-ahead logs, event sourcing — the log as the source of truth."
+    sources: [ddia]
+    related: [event-sourcing]
+    tags: [theory]
+
+  - id: service-discovery
+    title: "Service discovery — client-side vs server-side"
+    section: distributed-systems
+    summary: "DNS, Consul, Eureka, Envoy — registries and resolvers."
+    tags: [theory]
+
+  - id: distributed-tracing
+    title: "Distributed tracing — spans, traces, context propagation"
+    section: distributed-systems
+    summary: "OpenTelemetry, W3C Trace Context, and what 'one trace per request' actually means."
+    related: [observability-three-pillars]
+    tags: [hands-on]
+
+  - id: end-to-end-argument
+    title: "The end-to-end argument in system design"
+    section: distributed-systems
+    summary: "Why reliability often must live at the endpoints — Saltzer/Reed/Clark."
+    sources: [end-to-end-args]
+    tags: [theory, classic]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Concurrency
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: mutex-semaphore-monitor
+    title: "Mutex, semaphore, monitor — the three classic primitives"
+    section: concurrency
+    summary: "What each protects, what each costs, and when one is wrong for the job."
+    sources: [cltm]
+    tags: [theory, hands-on]
+
+  - id: lock-free-programming
+    title: "Lock-free programming and CAS"
+    section: concurrency
+    summary: "Compare-and-swap, the ABA problem, and why Treiber stacks are textbook for a reason."
+    sources: [cltm]
+    tags: [theory, advanced]
+
+  - id: mvcc
+    title: "Multi-version concurrency control (MVCC)"
+    section: concurrency
+    summary: "Snapshots over locks — Postgres, MySQL InnoDB, Oracle."
+    sources: [ddia]
+    tags: [theory]
+
+  - id: optimistic-vs-pessimistic-locking
+    title: "Optimistic vs pessimistic locking"
+    section: concurrency
+    summary: "When to assume conflicts are rare, and when retries are cheaper than waits."
+    sources: [peaa]
+    tags: [theory]
+
+  - id: deadlock-detection
+    title: "Deadlocks — Coffman conditions and prevention strategies"
+    section: concurrency
+    summary: "Lock ordering, timeouts, and wait-die / wound-wait."
+    sources: [cltm]
+    tags: [theory]
+
+  - id: race-conditions
+    title: "Race conditions and data races (and why they're different)"
+    section: concurrency
+    summary: "Toctou bugs, memory races, and the tools that find them."
+    tags: [hands-on]
+
+  - id: memory-ordering
+    title: "Memory ordering and the happens-before relation"
+    section: concurrency
+    summary: "Why your single-threaded mental model lies about modern CPUs — and the JMM / C++ memory model."
+    sources: [cltm]
+    tags: [theory, advanced]
+
+  - id: backpressure
+    title: "Backpressure"
+    section: concurrency
+    summary: "What happens when the producer is faster than the consumer — and the strategies that don't OOM."
+    related: [rate-limiting, circuit-breakers]
+    tags: [theory, hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Storage
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: btrees-vs-lsm
+    title: "B-trees vs LSM trees"
+    section: storage
+    summary: "Read vs write tradeoffs — and why your OLTP database picked one."
+    sources: [ddia]
+    tags: [theory]
+
+  - id: write-ahead-logs
+    title: "Write-ahead logging (WAL)"
+    section: storage
+    summary: "Durability before mutation — the trick behind crash recovery in every serious database."
+    sources: [ddia]
+    tags: [theory]
+
+  - id: replication-strategies
+    title: "Replication: single-leader, multi-leader, leaderless"
+    section: storage
+    summary: "Synchronous vs async, read-your-writes, and the lag problem."
+    sources: [ddia]
+    tags: [theory]
+
+  - id: sharding-strategies
+    title: "Sharding: range, hash, geo"
+    section: storage
+    summary: "Hot partitions, resharding cost, and the consistent-hashing connection."
+    sources: [ddia]
+    related: [consistent-hashing]
+    tags: [theory]
+
+  - id: db-indexes
+    title: "Indexes — covering, partial, multi-column, expression"
+    section: storage
+    summary: "Why the index order matters, and what the planner actually does with one."
+    sources: [ddia]
+    tags: [hands-on]
+
+  - id: normalization-vs-denormalization
+    title: "Normalization vs denormalization"
+    section: storage
+    summary: "3NF as a default, denorm as a perf escape hatch — and the consistency cost."
+    sources: [ddia]
+    tags: [theory]
+
+  - id: materialized-views
+    title: "Materialized views"
+    section: storage
+    summary: "Precomputed reads, refresh strategies, and the relationship to CQRS."
+    related: [cqrs]
+    sources: [ddia]
+    tags: [theory]
+
+  - id: transaction-isolation-levels
+    title: "Transaction isolation levels"
+    section: storage
+    summary: "Read uncommitted, read committed, repeatable read, serializable — and the anomalies each allows."
+    sources: [ddia]
+    tags: [theory, classic]
+
+  - id: change-data-capture
+    title: "Change data capture (CDC)"
+    section: storage
+    summary: "Streaming the database's transaction log to downstream consumers — Debezium, Maxwell."
+    sources: [ddia]
+    related: [event-driven-architecture, outbox-pattern]
+    tags: [hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Networking
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: http-semantics
+    title: "HTTP semantics — methods, status, idempotency, safety"
+    section: networking
+    summary: "What `PUT` actually promises, what `POST` doesn't, and the matrix every API designer should know."
+    sources: [rfc9110]
+    tags: [theory, classic]
+
+  - id: http-caching
+    title: "HTTP caching — `Cache-Control`, `ETag`, `Vary`"
+    section: networking
+    summary: "The header soup that decides what's safe to cache and for how long."
+    sources: [rfc7234, mdn]
+    tags: [hands-on]
+
+  - id: tcp-fundamentals
+    title: "TCP — three-way handshake, congestion control, head-of-line blocking"
+    section: networking
+    summary: "Why HTTP/3 over QUIC exists."
+    sources: [tcpip-illustrated]
+    tags: [theory, classic]
+
+  - id: udp-and-when-to-use-it
+    title: "UDP — and the surprising places it's the right answer"
+    section: networking
+    summary: "DNS, video, games, QUIC — when no-handshake, no-retransmit wins."
+    sources: [tcpip-illustrated]
+    tags: [theory]
+
+  - id: tls-handshake
+    title: "The TLS handshake (1.2 and 1.3)"
+    section: networking
+    summary: "Cert chains, key exchange, and what 1.3 dropped to halve the round trips."
+    tags: [theory]
+
+  - id: grpc-vs-rest
+    title: "gRPC vs REST — protocol, framing, streaming"
+    section: networking
+    summary: "HTTP/2 multiplexing, protobuf framing, bidi streams — and where REST still wins."
+    tags: [theory]
+
+  - id: graphql-design
+    title: "GraphQL — design tradeoffs vs REST"
+    section: networking
+    summary: "Type system, N+1 trap, persisted queries, federation."
+    tags: [theory]
+
+  - id: websockets-and-sse
+    title: "WebSockets vs Server-Sent Events vs long polling"
+    section: networking
+    summary: "When each is right — duplex needs, browser support, proxies."
+    tags: [theory, hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Testing patterns
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: test-pyramid
+    title: "The test pyramid — and the testing trophy"
+    section: testing
+    summary: "Why you want lots of small tests and few big ones — and Kent C. Dodds' counter-shape."
+    sources: [xunit-patterns]
+    tags: [theory]
+
+  - id: test-doubles
+    title: "Test doubles: fakes, mocks, stubs, spies, dummies"
+    section: testing
+    summary: "Meszaros' taxonomy — and which to reach for when."
+    sources: [xunit-patterns]
+    tags: [theory, hands-on, classic]
+
+  - id: contract-tests
+    title: "Contract testing"
+    section: testing
+    summary: "Consumer-driven contracts — Pact, and the death of brittle e2e tests."
+    tags: [theory]
+
+  - id: property-based-testing
+    title: "Property-based testing"
+    section: testing
+    summary: "Hypothesis, fast-check — generators, shrinking, and finding bugs you'd never think to write."
+    tags: [hands-on]
+
+  - id: mutation-testing
+    title: "Mutation testing"
+    section: testing
+    summary: "Mutating your source to see if your tests catch it — the meta-test that grades your tests."
+    tags: [theory]
+
+  - id: snapshot-testing
+    title: "Snapshot testing — uses and abuses"
+    section: testing
+    summary: "When snapshots become a rubber stamp, and how to keep them honest."
+    tags: [hands-on]
+
+  - id: arrange-act-assert
+    title: "Arrange / Act / Assert and the test naming style"
+    section: testing
+    summary: "Why test names that read like specifications make failures debuggable."
+    sources: [xunit-patterns]
+    tags: [hands-on]
+
+  - id: characterization-tests
+    title: "Characterization tests"
+    section: testing
+    summary: "Locking in current behavior of legacy code before you refactor it."
+    sources: [refactoring]
+    tags: [hands-on]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Observability
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: observability-three-pillars
+    title: "Logs, metrics, traces — the three pillars (and why people argue about a fourth)"
+    section: observability
+    summary: "What each is for, when they overlap, and what 'profiles' adds."
+    sources: [sre-book]
+    tags: [theory]
+
+  - id: structured-logging
+    title: "Structured logging"
+    section: observability
+    summary: "Logs as queryable events, not strings — and the case for JSON."
+    tags: [hands-on]
+
+  - id: red-method
+    title: "RED method — Rate, Errors, Duration"
+    section: observability
+    summary: "Tom Wilkie's three numbers every service should expose."
+    sources: [sre-book]
+    tags: [theory]
+
+  - id: use-method
+    title: "USE method — Utilization, Saturation, Errors"
+    section: observability
+    summary: "Brendan Gregg's framework for diagnosing resource bottlenecks."
+    tags: [theory]
+
+  - id: sampling-strategies
+    title: "Sampling strategies for tracing"
+    section: observability
+    summary: "Head-based vs tail-based, and why you can't afford 100% in production."
+    related: [distributed-tracing]
+    tags: [theory]
+
+  - id: alerting-symptoms-vs-causes
+    title: "Alerting on symptoms vs causes"
+    section: observability
+    summary: "Why pager-worthy alerts should describe user-facing pain — and the SLO connection."
+    sources: [sre-book]
+    tags: [theory]
+
+  - id: slos-slis-error-budgets
+    title: "SLOs, SLIs, and error budgets"
+    section: observability
+    summary: "The Google SRE framework for trading feature velocity against reliability."
+    sources: [sre-book]
+    tags: [theory]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Reliability
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: circuit-breakers
+    title: "Circuit breakers"
+    section: reliability
+    summary: "Closed, open, half-open — and stopping cascading failures at the source."
+    sources: [release-it]
+    tags: [hands-on, classic]
+
+  - id: bulkheads
+    title: "Bulkheads"
+    section: reliability
+    summary: "Resource isolation so one failing dependency can't drain the whole pool."
+    sources: [release-it]
+    tags: [hands-on]
+
+  - id: retries-jitter-backoff
+    title: "Retries with exponential backoff and jitter"
+    section: reliability
+    summary: "Why naive retries cause thundering herds, and the AWS-recommended jitter recipes."
+    tags: [hands-on, classic]
+
+  - id: timeouts-and-deadlines
+    title: "Timeouts and deadlines"
+    section: reliability
+    summary: "Bounded patience all the way down — and propagated deadlines across services."
+    sources: [release-it]
+    tags: [hands-on]
+
+  - id: rate-limiting
+    title: "Rate limiting algorithms"
+    section: reliability
+    summary: "Token bucket, leaky bucket, fixed window, sliding window — and where each lies about its accuracy."
+    tags: [hands-on]
+
+  - id: load-shedding
+    title: "Load shedding"
+    section: reliability
+    summary: "Failing fast at the edge to protect the core — and prioritization queues."
+    sources: [release-it, sre-book]
+    tags: [theory]
+
+  - id: graceful-degradation
+    title: "Graceful degradation"
+    section: reliability
+    summary: "Serving a reduced experience instead of an error page — the design discipline."
+    sources: [release-it]
+    tags: [theory]
+
+  - id: blue-green-deploys
+    title: "Blue/green deploys"
+    section: reliability
+    summary: "Two production environments, instant cutover, instant rollback."
+    tags: [hands-on]
+
+  - id: canary-deploys
+    title: "Canary deploys"
+    section: reliability
+    summary: "Route a slice of traffic to the new version and watch the metrics."
+    related: [feature-flags]
+    tags: [hands-on]
+
+  - id: shadow-traffic
+    title: "Shadow traffic / dark launches"
+    section: reliability
+    summary: "Send real production traffic to a new code path without showing the user the response."
+    tags: [hands-on]
+
+  - id: chaos-engineering
+    title: "Chaos engineering"
+    section: reliability
+    summary: "Injecting failures in production to validate the system's resilience hypotheses."
+    sources: [sre-book]
+    tags: [theory]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Security primitives
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: authn-vs-authz
+    title: "Authentication vs authorization"
+    section: security
+    summary: "Who you are vs what you're allowed to do — and the role/permission/scope soup."
+    tags: [theory, classic]
+
+  - id: oauth-flows
+    title: "OAuth 2.0 flows — auth code, PKCE, client credentials, device"
+    section: security
+    summary: "Which flow for which client — browser, mobile, machine, smart TV."
+    sources: [rfc6749]
+    tags: [theory, hands-on]
+
+  - id: jwt-vs-session
+    title: "JWT vs session cookies"
+    section: security
+    summary: "Stateless vs stateful auth — and the revocation problem."
+    tags: [theory, hands-on]
+
+  - id: csrf
+    title: "CSRF — cross-site request forgery"
+    section: security
+    summary: "Why your authenticated cookie is dangerous, and the SameSite + token defenses."
+    sources: [owasp-top-10]
+    tags: [hands-on, classic]
+
+  - id: xss
+    title: "XSS — cross-site scripting"
+    section: security
+    summary: "Reflected, stored, DOM-based — and the CSP / escaping defenses."
+    sources: [owasp-top-10]
+    tags: [hands-on, classic]
+
+  - id: sql-injection
+    title: "SQL injection"
+    section: security
+    summary: "Parameterized queries — the one defense everyone knows but still gets wrong."
+    sources: [owasp-top-10]
+    tags: [hands-on, classic]
+
+  - id: secrets-management
+    title: "Secrets management"
+    section: security
+    summary: "Vault, KMS, sealed-secrets — and what NOT to put in your repo."
+    tags: [hands-on]
+
+  - id: threat-modeling-stride
+    title: "Threat modeling with STRIDE"
+    section: security
+    summary: "Spoofing, Tampering, Repudiation, Information disclosure, DoS, Elevation of privilege."
+    sources: [stride-paper]
+    tags: [theory]
+
+  - id: same-origin-policy
+    title: "The same-origin policy and CORS"
+    section: security
+    summary: "Why your browser cares which page made the request, and what `Access-Control-*` really does."
+    sources: [mdn]
+    tags: [hands-on]
+
+  - id: tls-and-pki
+    title: "TLS and the PKI it rides on"
+    section: security
+    summary: "Certificate chains, CT logs, revocation — and why pinning fell out of favor."
+    related: [tls-handshake]
+    tags: [theory]
