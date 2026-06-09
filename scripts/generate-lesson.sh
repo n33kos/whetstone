@@ -18,4 +18,10 @@ if [[ ! -d "$STATE" ]]; then
   exit 2
 fi
 
-exec python3 "$REPO/scripts/plan_and_generate.py" "$@"
+PY="$STATE/.venv/bin/python3"
+if [[ ! -x "$PY" ]]; then
+  echo "✗ Whetstone venv missing at $PY. Re-run $REPO/scripts/install.sh." >&2
+  exit 2
+fi
+
+exec "$PY" "$REPO/scripts/plan_and_generate.py" "$@"

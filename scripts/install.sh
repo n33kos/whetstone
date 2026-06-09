@@ -26,6 +26,20 @@ command -v npm >/dev/null 2>&1 || die "npm is required but not found on PATH."
 say "Creating state directory at $STATE"
 mkdir -p "$STATE"/{lessons,logs}
 
+# ─── Python venv via uv (pinned, so launchd's PATH can't trip us) ───────
+UV_BIN=""
+for candidate in "$HOME/.local/bin/uv" /opt/homebrew/bin/uv /usr/local/bin/uv "$(command -v uv || true)"; do
+  if [[ -x "$candidate" ]]; then UV_BIN="$candidate"; break; fi
+done
+[[ -n "$UV_BIN" ]] || die "uv is required but not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+
+if [[ ! -x "$STATE/.venv/bin/python3" ]]; then
+  say "Creating Python venv at $STATE/.venv (via uv)"
+  (cd "$STATE" && "$UV_BIN" venv .venv --quiet)
+fi
+say "Installing pyyaml into the whetstone venv (via uv)"
+"$UV_BIN" pip install --python "$STATE/.venv/bin/python3" --quiet pyyaml
+
 # ─── TypeScript / Vitest shared install ──────────────────────────────────
 if [[ ! -f "$STATE/package.json" ]]; then
   say "Initializing shared TypeScript install"
