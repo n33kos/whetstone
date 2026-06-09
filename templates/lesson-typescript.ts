@@ -10,11 +10,7 @@
  * ───────────────────────────────────────────────────────────────────────────
  * Run this lesson
  *
- *   npx --prefix ~/.whetstone vitest run {{LESSON_PATH}}
- *
- * Or, if your shell is already in `~/.whetstone`:
- *
- *   npx vitest run {{LESSON_PATH}}
+ *   cd ~/.whetstone && npx vitest run {{LESSON_PATH}}
  * ───────────────────────────────────────────────────────────────────────────
  *
  * Concept

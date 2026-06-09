@@ -57,6 +57,21 @@ if [[ ! -f "$STATE/package.json" ]]; then
 JSON
 fi
 
+if [[ ! -f "$STATE/vitest.config.ts" ]]; then
+  say "Writing vitest config (lesson.ts include pattern)"
+  cat > "$STATE/vitest.config.ts" <<'TSCONFIG'
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    // Whetstone lessons live at lessons/YYYY-MM-DD/lesson.ts — they're not
+    // *.test.ts because the file IS the lesson. Match the lesson naming.
+    include: ['lessons/**/lesson.ts'],
+  },
+});
+TSCONFIG
+fi
+
 say "Installing Vitest + TS toolchain (npm install in $STATE)"
 (cd "$STATE" && npm install --silent --save-dev \
   vitest@^2 \
