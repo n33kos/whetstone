@@ -2,12 +2,11 @@
 """
 Whetstone planner + generator.
 
-Reads the catalog and knowledge map, picks a topic for today (or honors an
-override), invokes Claude to render the lesson content from a template,
-writes it to ~/.whetstone/lessons/YYYY-MM-DD/lesson.{ts,rb}, and opens it
-in VS Code.
+Picks today's topic, prompts Claude to emit a lesson directory (whatever set
+of files actually teaches the concept), writes everything to
+~/.whetstone/lessons/YYYY-MM-DD/, and opens the directory in VS Code.
 
-Entry point for both the launchd cron and the /whetstone:generate skill.
+Lessons are directories, not single files. See templates/lesson-shape.md.
 """
 
 from __future__ import annotations
@@ -100,7 +99,8 @@ def yesterday_dir(today: dt.date) -> Path | None:
     if not LESSONS.exists():
         return None
     candidates = sorted(
-        (p for p in LESSONS.iterdir() if p.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", p.name)),
+        (p for p in LESSONS.iterdir()
+         if p.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", p.name)),
         reverse=True,
     )
     for c in candidates:
@@ -113,78 +113,57 @@ def yesterday_dir(today: dt.date) -> Path | None:
     return None
 
 
-SCRATCH_NEXT_RE = re.compile(r"^\s*(?://|#)?\s*NEXT:\s*(.+?)\s*$", re.MULTILINE)
-
-
-def parse_scratchpad(lesson_path: Path) -> dict[str, Any]:
-    """Pull the scratchpad section out of a lesson file and look for NEXT:.
-
-    Returns {"text": str, "next": str | None}.
-    """
-    text = lesson_path.read_text(errors="replace")
-    # Scratchpad starts at the literal `scratch:` marker (in either lang).
-    m = re.search(r"(?://|#)\s*scratch:\s*\n(.*)$", text, re.DOTALL)
-    body = m.group(1) if m else ""
-    nxt = SCRATCH_NEXT_RE.search(body)
-    return {"text": body.strip(), "next": (nxt.group(1).strip() if nxt else None)}
-
-
-def extract_topic_id(lesson_path: Path) -> str | None:
-    """Pull the topic id out of the lesson header comment."""
-    text = lesson_path.read_text(errors="replace")
-    m = re.search(r"Topic id:\s*(\S+)", text)
-    return m.group(1) if m else None
-
-
-def run_test(lesson_path: Path, timeout: int = 30) -> bool | None:
-    """Best-effort: run the lesson's test and return True/False/None.
-
-    None means the test runner couldn't be invoked (don't penalize).
-    """
-    suffix = lesson_path.suffix
+def load_lesson_meta(lesson_dir: Path) -> dict | None:
+    """Read lesson.json from a lesson dir."""
+    meta_path = lesson_dir / "lesson.json"
+    if not meta_path.exists():
+        return None
     try:
-        if suffix == ".ts":
-            r = subprocess.run(
-                ["npx", "--prefix", str(STATE), "vitest", "run", str(lesson_path)],
-                cwd=STATE, capture_output=True, timeout=timeout, text=True,
-            )
-        elif suffix == ".rb":
-            r = subprocess.run(
-                ["bundle", "exec", "rspec", str(lesson_path)],
-                cwd=STATE,
-                env={**os.environ, "BUNDLE_GEMFILE": str(STATE / "Gemfile")},
-                capture_output=True, timeout=timeout, text=True,
-            )
-        else:
-            return None
+        return json.loads(meta_path.read_text())
+    except Exception:
+        return None
+
+
+SCRATCH_NEXT_RE = re.compile(r"^\s*NEXT:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def parse_scratchpad(lesson_dir: Path) -> dict[str, Any]:
+    """Read scratch.md and pull any NEXT: directive."""
+    scratch = lesson_dir / "scratch.md"
+    if not scratch.exists():
+        return {"text": "", "next": None}
+    text = scratch.read_text(errors="replace")
+    nxt = SCRATCH_NEXT_RE.search(text)
+    return {"text": text.strip(), "next": (nxt.group(1).strip() if nxt else None)}
+
+
+def run_test(lesson_dir: Path, meta: dict, timeout: int = 60) -> bool | None:
+    """Run the test for a lesson using its declared run_command. None == couldn't run."""
+    cmd = meta.get("run_command", "").strip()
+    if not cmd:
+        return None
+    try:
+        r = subprocess.run(
+            ["bash", "-lc", cmd],
+            cwd=STATE, capture_output=True, timeout=timeout, text=True,
+        )
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
     return r.returncode == 0
 
 
-def code_was_edited(lesson_path: Path) -> bool:
-    """True if anything was written between the "your code here" markers."""
-    text = lesson_path.read_text(errors="replace")
-    m = re.search(
-        r"▼ your code here ▼(.*?)▲ your code here ▲",
-        text, re.DOTALL,
-    )
-    if not m:
+def scaffolds_were_edited(lesson_dir: Path, meta: dict) -> bool:
+    """Mtime heuristic: any scaffold file modified > 60s after generation."""
+    try:
+        generated = dt.datetime.fromisoformat(meta.get("generated_at_iso", ""))
+    except Exception:
         return False
-    body = m.group(1)
-    # Strip the framing comments and look for non-blank, non-comment lines
-    # that aren't the placeholder scaffold.
-    real = []
-    for line in body.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        if s.startswith("//") or s.startswith("#"):
-            continue
-        if "YOUR_CODE_SCAFFOLD" in s or s in ("{}", "{};"):
-            continue
-        real.append(s)
-    return len(real) > 0
+    cutoff = generated.timestamp() + 60  # grace for write latency
+    for fname in meta.get("scaffold_files", []) or []:
+        f = lesson_dir / fname
+        if f.exists() and f.stat().st_mtime > cutoff:
+            return True
+    return False
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -192,27 +171,19 @@ def code_was_edited(lesson_path: Path) -> bool:
 # ──────────────────────────────────────────────────────────────────────────
 
 def update_kmap_for_yesterday(kmap: dict, today: dt.date) -> dict[str, Any] | None:
-    """Inspect yesterday's lesson and roll its signal into the knowledge map.
-
-    Returns a dict describing what happened, or None if there was no
-    prior lesson to inspect.
-    """
     ydir = yesterday_dir(today)
     if ydir is None:
         return None
-
-    files = list(ydir.glob("lesson.*"))
-    if not files:
+    meta = load_lesson_meta(ydir)
+    if not meta:
         return None
-    lesson = files[0]
-
-    tid = extract_topic_id(lesson)
+    tid = meta.get("topic_id")
     if not tid:
         return None
 
-    engaged = code_was_edited(lesson)
-    result = run_test(lesson) if engaged else None
-    scratch = parse_scratchpad(lesson)
+    engaged = scaffolds_were_edited(ydir, meta)
+    result  = run_test(ydir, meta) if engaged else None
+    scratch = parse_scratchpad(ydir)
 
     topics = kmap.setdefault("topics", {})
     entry = topics.setdefault(tid, {
@@ -222,71 +193,56 @@ def update_kmap_for_yesterday(kmap: dict, today: dt.date) -> dict[str, Any] | No
         "engagements": 0,
         "completions": 0,
     })
-
     entry["last_seen_at"] = ydir.name
 
     if engaged:
         entry["engagements"] = entry.get("engagements", 0) + 1
         if result is True:
             entry["completions"] = entry.get("completions", 0) + 1
-            entry["confidence"] = min(1.0, entry.get("confidence", 0.0) + 0.25)
-            # Next review pushed out ~ 2^completions days, capped at 60.
+            entry["confidence"]  = min(1.0, entry.get("confidence", 0.0) + 0.25)
             gap = min(60, 2 ** entry["completions"])
         else:
-            # Engaged but didn't pass — concept exposure still earns a nudge.
-            entry["confidence"] = min(1.0, entry.get("confidence", 0.0) + 0.10)
+            entry["confidence"]  = min(1.0, entry.get("confidence", 0.0) + 0.10)
             gap = 3
         next_review = dt.date.fromisoformat(ydir.name) + dt.timedelta(days=gap)
         entry["next_review_at"] = next_review.isoformat()
-    # If not engaged, log no signal — leave confidence and next_review alone.
 
     return {
         "topic_id": tid,
         "engaged": engaged,
         "test_passed": result,
         "scratch_next": scratch["next"],
+        "scratch_text": scratch["text"],
     }
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Topic selection
+# Topic + language selection (unchanged)
 # ──────────────────────────────────────────────────────────────────────────
 
-def pick_topic(
-    catalog: dict[str, Topic],
-    kmap: dict,
-    state: dict,
-    language: str,
-    today: dt.date,
-    override_hint: str | None,
-    rng: random.Random,
-) -> tuple[Topic, str]:
-    """Pick today's topic. Returns (topic, mode)."""
+def pick_topic(catalog, kmap, state, language, today, override_hint, rng):
     topics = kmap.get("topics", {})
     eligible = [t for t in catalog.values() if language in t.languages or "any" in t.languages]
     if not eligible:
         eligible = list(catalog.values())
 
-    # 1. Honor scratchpad NEXT: or explicit hint.
     if override_hint:
         match = resolve_hint(override_hint, eligible)
         if match:
             return match, "override"
 
-    # 2. Exploration cadence — every Nth day, force a never-seen topic.
     cadence = int(state.get("exploration_cadence_days", 7))
     if cadence > 0 and (today.toordinal() % cadence == 0):
         unseen = [t for t in eligible if t.id not in topics]
         if unseen:
             return rng.choice(unseen), "exploration"
 
-    # 3. Reinforcement: weight by (1 - confidence) and forgetting curve.
     focus = set(state.get("current_focus_areas", []) or [])
 
     def score(t: Topic) -> float:
         entry = topics.get(t.id)
         if entry is None:
-            base = 0.55  # mid — never seen leans slightly toward exploration
+            base = 0.55
         else:
             conf = float(entry.get("confidence", 0.0))
             last = entry.get("last_seen_at")
@@ -305,18 +261,12 @@ def pick_topic(
 
     weights = [(score(t), t) for t in eligible]
     weights.sort(key=lambda w: w[0], reverse=True)
-    # Soften determinism: pick from the top 12 with weighted random.
     top = weights[:12]
     chosen = rng.choices([t for _, t in top], weights=[s for s, _ in top], k=1)[0]
     return chosen, "reinforcement"
 
 
-def resolve_hint(hint: str, pool: list[Topic]) -> Topic | None:
-    """Match a scratchpad NEXT: hint against the catalog.
-
-    Tries exact id match first, then case-insensitive substring against
-    id / title / section.
-    """
+def resolve_hint(hint, pool):
     if not hint:
         return None
     by_id = {t.id: t for t in pool}
@@ -329,11 +279,7 @@ def resolve_hint(hint: str, pool: list[Topic]) -> Topic | None:
     return None
 
 
-# ──────────────────────────────────────────────────────────────────────────
-# Language selection
-# ──────────────────────────────────────────────────────────────────────────
-
-def pick_language(state: dict, today: dt.date) -> str:
+def pick_language(state, today):
     primary = state.get("current_language", "typescript")
     secondary = state.get("secondary_language", "ruby")
     cadence = int(state.get("ruby_cadence_days", 0))
@@ -343,43 +289,30 @@ def pick_language(state: dict, today: dt.date) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Lesson rendering
+# Lesson generation — multi-file manifest format
 # ──────────────────────────────────────────────────────────────────────────
 
-def build_prompt(
-    topic: Topic,
-    sources: dict[str, dict],
-    template: str,
-    language: str,
-    mode: str,
-    lesson_path: Path,
-    yesterday_note: str | None,
-) -> str:
-    """The single prompt sent to Claude to render the lesson."""
+def build_prompt(topic, sources, language, mode, lesson_dir, yesterday_note):
     src_lines = []
     for sid in topic.sources:
         s = sources.get(sid)
         if not s:
             continue
         author = ", ".join(s.get("authors", [])) if s.get("authors") else ""
-        year = s.get("year", "")
-        url = s.get("url", "")
+        year   = s.get("year", "")
+        url    = s.get("url", "")
         bits = [b for b in (author, str(year) if year else "", s.get("title", ""), url) if b]
         src_lines.append(" — ".join(bits))
-    sources_block = "\n".join(f"  - {line}" for line in src_lines) or "  - (no citations seeded; you may add canonical ones)"
+    sources_block = "\n".join(f"  - {line}" for line in src_lines) or "  - (no citations seeded; add canonical ones)"
 
     yesterday_block = (
         f"\nYesterday's scratchpad note from the learner:\n  \"{yesterday_note}\"\n"
-        f"Where appropriate, gently respond to what they wrote in the concept body."
+        f"Where appropriate, reference what they wrote in the concept body."
     ) if yesterday_note else ""
 
-    return f"""You are generating today's whetstone lesson — a single-file, copy-paste-runnable code lesson.
+    return f"""You are generating today's whetstone lesson — a multi-file lesson directory that actually teaches the concept by making the file structure mirror how the concept manifests in real systems.
 
-The lesson must be returned as the FULL CONTENTS of the file, nothing else. No preamble, no commentary, no markdown fences. Just the raw file contents, ready to write to disk.
-
-Use the template below VERBATIM as your output structure. Replace every {{{{PLACEHOLDER}}}} with appropriate content. Keep all comment framing, run-instructions, marker bars, and the scratchpad block intact.
-
-Topic to teach today:
+Topic to teach:
   id:       {topic.id}
   title:    {topic.title}
   section:  {topic.section}
@@ -388,87 +321,111 @@ Topic to teach today:
   language: {language}
   tags:     {", ".join(topic.tags) or "(none)"}
 
-Canonical references for this topic (use these in the References block):
+Canonical references for this topic:
 {sources_block}
 {yesterday_block}
 
-Placeholder fill instructions:
+The lesson is a directory at {lesson_dir}. You decide what files belong in it.
 
-  {{{{DATE}}}}             — today's ISO date
-  {{{{TOPIC_TITLE}}}}      — exactly "{topic.title}"
-  {{{{SECTION}}}}          — exactly "{topic.section}"
-  {{{{MODE}}}}             — exactly "{mode}"
-  {{{{TOPIC_ID}}}}         — exactly "{topic.id}"
-  {{{{LESSON_PATH}}}}      — exactly "{lesson_path}"
+HARD REQUIREMENTS:
 
-  {{{{CONCEPT_BODY}}}}     — 5-10 sentences explaining the concept with precision.
-                             Aim for the "tightest correct explanation a senior eng
-                             would respect." No fluff, no marketing tone. Use
-                             concrete examples and name specific systems where
-                             applicable. Wrap lines around column 80.
+1. The directory must contain a `README.md` with sections: Concept, Why it matters, Where it shows up in real systems, References, How to run this lesson, What you're implementing. Be precise and concrete. Name real production systems. Wrap at column 80.
 
-  {{{{WHY_IT_MATTERS}}}}   — 2-4 sentences on what this unlocks for the learner.
-                             Concrete failure modes it prevents or capabilities
-                             it enables.
+2. The directory must contain a failing test file. For TypeScript use vitest (`*.test.ts`); for Ruby use rspec (`*_spec.rb`). The test must be runnable as-is and must fail until the learner implements the scaffold(s).
 
-  {{{{REAL_WORLD_EXAMPLES}}}} — 2-4 short bullets (each line prefixed with " * ")
-                                naming real production systems, libraries, or
-                                incidents where this concept showed up.
+3. The directory must contain one or more scaffold files — the code the learner fills in. Scaffolds must parse/compile (so the test failure is a runtime / assertion failure, not a syntax error).
 
-  {{{{REFERENCES}}}}       — bulleted references built from the citations above.
-                             Each line prefixed with " * ". Include URLs where given.
+4. The directory must contain `scratch.md` with a single line `# Scratchpad — for your notes` and four blank lines below it. Tomorrow's planner reads this for `NEXT: <topic>` directives.
 
-  {{{{YOUR_CODE_HERE_HINT}}}} — one or two sentences hinting at the shape of what
-                                they need to implement, without giving it away.
+5. **Critically**: the file structure must mirror how the concept manifests in real systems. Do not collapse multi-process patterns into a single-file function. For sidecar / hexagonal / CQRS / event-sourcing / saga / actor-model / leader-election / replication / consistent-hashing / gossip and similar topics, give the learner separate files with clear process / module boundaries (e.g., `app.ts` + `sidecar.ts` + `lesson.test.ts` that spawns both as child processes and asserts the cross-process behavior). For purely algorithmic topics (closures, type variance, dynamic programming), a single scaffold file plus a test is fine.
 
-  {{{{YOUR_CODE_SCAFFOLD}}}} — empty function / class signatures the learner will
-                               fill in. The scaffold must compile (or parse) but
-                               the test must fail until they implement it. For
-                               TypeScript, use `export` and explicit types so the
-                               test can import. For Ruby, declare the class/method
-                               with a stub body that raises NotImplementedError
-                               or returns nil.
+6. If the lesson requires running multiple processes, the test file must orchestrate that itself — start any servers, set timeouts, tear down cleanly. The learner should be able to run a single command and see real cross-process behavior.
 
-  {{{{TEST_BODY}}}}        — a failing test block. For TypeScript use Vitest's
-                             `it(...)` / `expect(...)`. For Ruby use RSpec
-                             `it ... do ... expect(...).to eq(...) end`. The test
-                             must:
-                               1. Import / reference the symbols the scaffold
-                                  declares.
-                               2. Assert behavior that's pedagogically tied to
-                                  the concept above — not just any test.
-                               3. Be runnable as-is and fail until the learner
-                                  implements the scaffold.
-                             Indent the inner `it` block to match the surrounding
-                             describe context.
+7. The run command must execute the test cleanly from `~/.whetstone`. For TypeScript that's typically `cd ~/.whetstone && npx vitest run lessons/YYYY-MM-DD/<test-file>`. For Ruby `bundle exec rspec lessons/YYYY-MM-DD/<spec-file>`.
 
-Hard rules:
-  * Output ONLY the file contents. No prose around it. No fenced code blocks.
-  * Use the template's existing comment style (// for TS, # for Ruby).
-  * Keep the file under ~150 lines total.
-  * The scratchpad section at the bottom must be preserved verbatim, including
-    the "scratch:" marker and the empty lines after it.
-  * Do NOT add a date/author/PR/ticket signature anywhere in the file.
+8. Do NOT mention ticket numbers, dates beyond the lesson header, author names, "Claude", or any process metadata.
 
-Template to fill in (DO NOT alter anything outside the {{{{PLACEHOLDERS}}}}):
+OUTPUT FORMAT — emit EXACTLY this block structure and nothing else (no preamble, no markdown fences around the whole thing):
 
-────────────────── TEMPLATE BEGIN ──────────────────
-{template}
-─────────────────── TEMPLATE END ───────────────────
+=== RUN_COMMAND ===
+<the single shell command that runs the test from ~/.whetstone>
+=== SCAFFOLD_FILES ===
+<one filename per line — files the learner is meant to edit, scaffolds only, NOT the test or README>
+=== FILE: README.md ===
+<full README content>
+=== FILE: scratch.md ===
+# Scratchpad — for your notes
+
+
+
+
+=== FILE: <next filename> ===
+<full file content verbatim>
+=== FILE: <next filename> ===
+<full file content verbatim>
+... (continue for every file)
+=== END ===
+
+Output begins on the next line.
 """
 
 
-def call_claude(prompt: str) -> str | None:
-    """Invoke the `claude` CLI to generate the lesson contents.
+MANIFEST_BLOCK_RE = re.compile(r"^===\s*(.+?)\s*===\s*$", re.MULTILINE)
 
-    Returns the model's output, or None if the CLI is unavailable.
+
+def parse_manifest(text: str) -> dict | None:
+    """Parse the model's RUN_COMMAND / SCAFFOLD_FILES / FILE: ... / END manifest.
+
+    Returns {"run_command": str, "scaffold_files": [str], "files": {name: content}}
+    or None on parse failure.
     """
+    # Strip any leading prose / fences.
+    lines = text.splitlines()
+    start = 0
+    for i, ln in enumerate(lines):
+        if MANIFEST_BLOCK_RE.fullmatch(ln):
+            start = i
+            break
+    text = "\n".join(lines[start:])
+
+    sections: list[tuple[str, str]] = []
+    last_idx = 0
+    last_header = None
+    for m in MANIFEST_BLOCK_RE.finditer(text):
+        if last_header is not None:
+            body = text[last_idx:m.start()].rstrip("\n")
+            sections.append((last_header, body))
+        last_header = m.group(1).strip()
+        last_idx = m.end() + 1
+    if last_header is not None and last_header != "END":
+        body = text[last_idx:].rstrip("\n")
+        sections.append((last_header, body))
+
+    out = {"run_command": "", "scaffold_files": [], "files": {}}
+    for header, body in sections:
+        if header == "END":
+            break
+        if header == "RUN_COMMAND":
+            out["run_command"] = body.strip()
+        elif header == "SCAFFOLD_FILES":
+            out["scaffold_files"] = [ln.strip() for ln in body.splitlines() if ln.strip()]
+        elif header.startswith("FILE:"):
+            fname = header[len("FILE:"):].strip()
+            out["files"][fname] = body
+        else:
+            sys.stderr.write(f"warning: unknown manifest section '{header}'\n")
+    if not out["files"] or not out["run_command"]:
+        return None
+    return out
+
+
+def call_claude(prompt: str) -> str | None:
     if shutil.which("claude") is None:
         return None
     try:
         r = subprocess.run(
             ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=180,
+            capture_output=True, text=True, timeout=240,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
@@ -478,41 +435,46 @@ def call_claude(prompt: str) -> str | None:
     return r.stdout.strip()
 
 
-def render_fallback(template: str, topic: Topic, sources: dict, **fields: str) -> str:
-    """Mechanical template fill — used if Claude is unavailable.
-
-    Produces a usable-but-skeletal lesson that the user can flesh out manually.
-    """
+def render_fallback(topic, sources, lesson_dir, language, mode) -> dict:
+    """Minimal usable lesson when Claude is unavailable."""
     src_lines = []
     for sid in topic.sources:
         s = sources.get(sid, {})
         bits = [s.get("title", sid), s.get("url", "")]
-        src_lines.append(" * " + " — ".join(b for b in bits if b))
-    refs = "\n".join(src_lines) or " * (no references seeded)"
+        src_lines.append("- " + " — ".join(b for b in bits if b))
+    refs = "\n".join(src_lines) or "- (no references seeded)"
 
-    body = template
-    repl = {
-        "DATE": fields["DATE"],
-        "TOPIC_TITLE": topic.title,
-        "SECTION": topic.section,
-        "MODE": fields["MODE"],
-        "TOPIC_ID": topic.id,
-        "LESSON_PATH": fields["LESSON_PATH"],
-        "CONCEPT_BODY": (
-            f"{topic.summary}\n *\n * [Claude CLI was unavailable when this lesson was "
-            f"generated, so the concept body wasn't filled in. Skim the references "
-            f"below and try the test anyway — that's still useful.]"
-        ),
-        "WHY_IT_MATTERS": "(fallback — fill in manually)",
-        "REAL_WORLD_EXAMPLES": " * (fallback — fill in manually)",
-        "REFERENCES": refs,
-        "YOUR_CODE_HERE_HINT": "Read the failing test below — its assertions describe what to build.",
-        "YOUR_CODE_SCAFFOLD": "// TODO: scaffold not generated (Claude unavailable). Write whatever symbols the test needs.",
-        "TEST_BODY": "  it.todo('Claude was unavailable — write a test or copy from the references');",
+    rel = lesson_dir.relative_to(STATE).as_posix()
+    if language == "ruby":
+        test_name = "lesson_spec.rb"
+        scaffold = "lesson.rb"
+        run_cmd = f"cd ~/.whetstone && bundle exec rspec {rel}/{test_name}"
+        scaffold_body = "# TODO: implement\n"
+        test_body = "require_relative 'lesson'\n\nRSpec.describe '{}' do\n  it 'is implemented' do\n    expect(true).to be(false)\n  end\nend\n".format(topic.title)
+    else:
+        test_name = "lesson.test.ts"
+        scaffold = "lesson.ts"
+        run_cmd = f"cd ~/.whetstone && npx vitest run {rel}/{test_name}"
+        scaffold_body = "// TODO: implement\nexport {};\n"
+        test_body = "import { describe, expect, it } from 'vitest';\n\ndescribe('" + topic.title + "', () => {\n  it.todo('Claude CLI was unavailable — write the test manually');\n});\n"
+
+    readme = (
+        f"# {topic.title}\n\n## Concept\n\n{topic.summary}\n\n"
+        f"_(Claude CLI was unavailable when this lesson was generated; concept body wasn't filled in. Skim the references and try anyway.)_\n\n"
+        f"## How to run this lesson\n\n```\n{run_cmd}\n```\n\n"
+        f"## References\n\n{refs}\n"
+    )
+
+    return {
+        "run_command": run_cmd,
+        "scaffold_files": [scaffold],
+        "files": {
+            "README.md": readme,
+            "scratch.md": "# Scratchpad — for your notes\n\n\n\n",
+            scaffold: scaffold_body,
+            test_name: test_body,
+        },
     }
-    for k, v in repl.items():
-        body = body.replace("{{" + k + "}}", v)
-    return body
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -521,16 +483,11 @@ def render_fallback(template: str, topic: Topic, sources: dict, **fields: str) -
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--force", action="store_true",
-                    help="Generate even if today's lesson already exists (overwrites).")
-    ap.add_argument("--topic", default=None,
-                    help="Override topic selection with a specific topic id or hint.")
-    ap.add_argument("--language", default=None,
-                    help="Override language selection (typescript or ruby).")
-    ap.add_argument("--no-open", action="store_true",
-                    help="Skip opening the lesson in VS Code.")
-    ap.add_argument("--seed", type=int, default=None,
-                    help="Deterministic RNG seed (for testing).")
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--topic", default=None)
+    ap.add_argument("--language", default=None)
+    ap.add_argument("--no-open", action="store_true")
+    ap.add_argument("--seed", type=int, default=None)
     args = ap.parse_args()
 
     if not STATE.exists():
@@ -539,7 +496,6 @@ def main() -> int:
 
     today = dt.date.today()
     today_dir = LESSONS / today.isoformat()
-    lesson_ext_default = ".ts"
 
     rng = random.Random(args.seed) if args.seed is not None else random.Random()
 
@@ -548,20 +504,19 @@ def main() -> int:
     kmap    = load_kmap()
     state   = load_state()
 
-    # Roll yesterday's signal into the knowledge map.
     y_signal = update_kmap_for_yesterday(kmap, today)
     save_kmap(kmap)
 
-    # Pick language and topic.
     language = args.language or pick_language(state, today)
-    ext      = ".rb" if language == "ruby" else ".ts"
-    lesson_path = today_dir / f"lesson{ext}"
 
-    if lesson_path.exists() and not args.force:
-        print(f"Today's lesson already exists at {lesson_path}")
-        if not args.no_open:
-            open_in_editor(lesson_path)
-        return 0
+    if today_dir.exists() and not args.force:
+        meta = load_lesson_meta(today_dir)
+        if meta:
+            print(f"Today's lesson already exists at {today_dir}")
+            print(f"  topic: {meta.get('topic_id')} ({meta.get('mode')}, {meta.get('language')})")
+            if not args.no_open:
+                open_in_editor(today_dir)
+            return 0
 
     override_hint = args.topic
     if override_hint is None and y_signal:
@@ -569,45 +524,51 @@ def main() -> int:
 
     topic, mode = pick_topic(catalog, kmap, state, language, today, override_hint, rng)
 
-    # Load the template for this language.
-    template_name = "lesson-typescript.ts" if language != "ruby" else "lesson-ruby.rb"
-    template = (REPO / "templates" / template_name).read_text()
+    yesterday_note = (y_signal or {}).get("scratch_text") or None
+    prompt = build_prompt(topic, sources, language, mode, today_dir, yesterday_note)
 
-    yesterday_note = None
-    if y_signal:
-        ydir = yesterday_dir(today)
-        if ydir:
-            scratch_files = list(ydir.glob("lesson.*"))
-            if scratch_files:
-                yesterday_note = parse_scratchpad(scratch_files[0]).get("text") or None
-
-    prompt = build_prompt(topic, sources, template, language, mode, lesson_path, yesterday_note)
-
-    # Render via Claude (with fallback).
     rendered = call_claude(prompt)
-    if not rendered:
-        sys.stderr.write("Claude CLI unavailable — writing fallback scaffold.\n")
-        rendered = render_fallback(
-            template, topic, sources,
-            DATE=today.isoformat(),
-            MODE=mode,
-            LESSON_PATH=str(lesson_path),
-        )
+    manifest = parse_manifest(rendered) if rendered else None
+    if manifest is None:
+        sys.stderr.write("Claude unavailable or manifest unparsable — writing fallback.\n")
+        manifest = render_fallback(topic, sources, today_dir, language, mode)
 
-    # Write file.
+    # Wipe any pre-existing dir content if --force.
+    if args.force and today_dir.exists():
+        shutil.rmtree(today_dir)
     today_dir.mkdir(parents=True, exist_ok=True)
-    lesson_path.write_text(rendered)
-    print(f"✓ {lesson_path}")
+
+    for fname, content in manifest["files"].items():
+        out_path = today_dir / fname
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(content if content.endswith("\n") else content + "\n")
+
+    now_iso = dt.datetime.now().isoformat()
+    meta = {
+        "topic_id":         topic.id,
+        "title":            topic.title,
+        "section":          topic.section,
+        "mode":             mode,
+        "language":         language,
+        "generated_at":     today.isoformat(),
+        "generated_at_iso": now_iso,
+        "run_command":      manifest["run_command"],
+        "scaffold_files":   manifest["scaffold_files"],
+    }
+    (today_dir / "lesson.json").write_text(json.dumps(meta, indent=2))
+
+    print(f"✓ {today_dir}")
     print(f"  topic: {topic.id}  ({mode}, {language})")
+    print(f"  run:   {manifest['run_command']}")
 
     if not args.no_open:
-        open_in_editor(lesson_path)
+        open_in_editor(today_dir)
 
     return 0
 
 
 def open_in_editor(path: Path) -> None:
-    """Open the lesson in VS Code if available, falling back to `open`."""
+    """Open the lesson dir in VS Code if available."""
     if shutil.which("code"):
         subprocess.run(["code", str(path)], check=False)
     elif shutil.which("open"):
