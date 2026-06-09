@@ -341,7 +341,7 @@ HARD REQUIREMENTS:
 
 6. If the lesson requires running multiple processes, the test file must orchestrate that itself — start any servers, set timeouts, tear down cleanly. The learner should be able to run a single command and see real cross-process behavior.
 
-7. The run command must execute the test cleanly from `~/.whetstone`. For TypeScript that's typically `cd ~/.whetstone && npx vitest run lessons/YYYY-MM-DD/<test-file>`. For Ruby `bundle exec rspec lessons/YYYY-MM-DD/<spec-file>`.
+7. The lesson directory MUST contain an executable shell script literally named `run` (no extension). That script is the user-facing entry point — they type `./run` from inside the lesson dir and the tests execute. The script must `cd` into `$HOME/.whetstone` first (so node_modules / Gemfile resolution works) and then invoke vitest / rspec on the absolute path of the test file. The run command in the manifest's RUN_COMMAND block is the SAME absolute-path invocation — not `./run` — so the planner can run it programmatically too. Use `$HOME/.whetstone/lessons/YYYY-MM-DD/<test-file>` (absolute) rather than relative paths in both places.
 
 8. Do NOT mention ticket numbers, dates beyond the lesson header, author names, "Claude", or any process metadata.
 
@@ -542,6 +542,8 @@ def main() -> int:
         out_path = today_dir / fname
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(content if content.endswith("\n") else content + "\n")
+        if fname == "run" or fname.endswith(".sh"):
+            out_path.chmod(0o755)
 
     now_iso = dt.datetime.now().isoformat()
     meta = {
