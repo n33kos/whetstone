@@ -419,18 +419,37 @@ def parse_manifest(text: str) -> dict | None:
     return out
 
 
+def resolve_claude() -> str | None:
+    """Find the claude CLI without trusting launchd's minimal PATH."""
+    candidates = [
+        shutil.which("claude"),
+        str(Path.home() / ".local" / "bin" / "claude"),
+        "/opt/homebrew/bin/claude",
+        "/usr/local/bin/claude",
+    ]
+    for c in candidates:
+        if c and Path(c).exists():
+            return c
+    return None
+
+
 def call_claude(prompt: str) -> str | None:
-    if shutil.which("claude") is None:
+    claude_bin = resolve_claude()
+    if claude_bin is None:
         return None
     try:
         r = subprocess.run(
-            ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=240,
+            [claude_bin, "-p", prompt],
+            capture_output=True, text=True, timeout=600,
         )
-    except (subprocess.TimeoutExpired, FileNotFoundError):
+    except subprocess.TimeoutExpired:
+        sys.stderr.write("claude CLI timed out after 600s\n")
+        return None
+    except FileNotFoundError:
+        sys.stderr.write(f"claude CLI not found at {claude_bin}\n")
         return None
     if r.returncode != 0:
-        sys.stderr.write(f"claude CLI failed: {r.stderr}\n")
+        sys.stderr.write(f"claude CLI exited {r.returncode}: {r.stderr[:500]}\n")
         return None
     return r.stdout.strip()
 
