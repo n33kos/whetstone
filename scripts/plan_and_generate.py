@@ -433,17 +433,28 @@ def resolve_claude() -> str | None:
     return None
 
 
+CLAUDE_TIMEOUT_S = int(os.environ.get("WHETSTONE_CLAUDE_TIMEOUT", "1200"))
+CLAUDE_MODEL = os.environ.get("WHETSTONE_CLAUDE_MODEL", "sonnet")
+
+
 def call_claude(prompt: str) -> str | None:
     claude_bin = resolve_claude()
     if claude_bin is None:
         return None
+    # --strict-mcp-config with no --mcp-config disables every MCP server, so
+    # the headless run never blocks on plugin MCP health checks. Pin a fast
+    # model (sonnet by default) — lesson rendering is well-scoped and the
+    # default Opus session is slow enough to blow the timeout intermittently.
+    cmd = [claude_bin, "-p", "--strict-mcp-config"]
+    if CLAUDE_MODEL:
+        cmd += ["--model", CLAUDE_MODEL]
+    cmd.append(prompt)
     try:
         r = subprocess.run(
-            [claude_bin, "-p", prompt],
-            capture_output=True, text=True, timeout=600,
+            cmd, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired:
-        sys.stderr.write("claude CLI timed out after 600s\n")
+        sys.stderr.write(f"claude CLI timed out after {CLAUDE_TIMEOUT_S}s\n")
         return None
     except FileNotFoundError:
         sys.stderr.write(f"claude CLI not found at {claude_bin}\n")
