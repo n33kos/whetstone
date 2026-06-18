@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
-# whetstone install — one-time setup.
+# whetstone install / update — one-time setup AND the post-update step.
 #
 # Creates ~/.whetstone/ state directory, installs shared dev deps
 # (Vitest for TypeScript, RSpec for Ruby), seeds the catalog, writes
 # initial state files, and installs the launchd plist that fires the
-# daily 7am lesson generator.
+# daily weekday lesson generator.
 #
-# Idempotent. Safe to re-run.
+# Idempotent and self-locating: run it from wherever this copy of the
+# repo lives (a git clone, or the plugin cache at
+# ~/.claude/plugins/cache/n33kos/whetstone/<version>/) and it repoints
+# the single launchd job at THIS copy. Re-run it after every
+# `/plugin update` to adopt the new version. There is exactly one job
+# (one label, unloaded before reload), so updates never stack instances.
 
 set -euo pipefail
 
-REPO="${WHETSTONE_REPO:-$HOME/whetstone}"
+# Self-locate: REPO is the parent of this script's directory, so the
+# cron always points at whichever copy you ran install from.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="${WHETSTONE_REPO:-$(dirname "$SCRIPT_DIR")}"
 STATE="${WHETSTONE_STATE:-$HOME/.whetstone}"
 LABEL="com.whetstone.daily"
 PLIST_DST="$HOME/Library/LaunchAgents/${LABEL}.plist"
@@ -121,11 +129,24 @@ if [[ ! -f "$STATE/state.json" ]]; then
   "secondary_language": "ruby",
   "ruby_cadence_days": 5,
   "exploration_cadence_days": 7,
+  "lesson_model": "sonnet",
   "current_focus_areas": [],
   "goals": [],
   "bootstrap_completed_at": null
 }
 JSON
+fi
+
+# Backfill lesson_model on state files created before it existed.
+if [[ -f "$STATE/state.json" ]] && ! grep -q '"lesson_model"' "$STATE/state.json"; then
+  say "Adding lesson_model to existing state.json (default: sonnet)"
+  "$STATE/.venv/bin/python3" - "$STATE/state.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d.setdefault("lesson_model", "sonnet")
+json.dump(d, open(p, "w"), indent=2)
+PY
 fi
 
 # ─── launchd plist ───────────────────────────────────────────────────────
@@ -141,9 +162,21 @@ sed \
   -e "s/{{HOME}}/${HOME_ESC}/g" \
   "$REPO/templates/launchd.plist" > "$PLIST_DST"
 
-# Unload first to avoid "service already loaded" — ignore failure on first install.
+# Guarantee a single instance: tear down ANY existing job under this label
+# (regardless of which path/version registered it) before loading this one.
+# Both teardown forms are tried because older macOS uses unload, newer uses
+# bootout; either failing is fine when no job exists yet.
+GUI="gui/$(id -u)"
+launchctl bootout "$GUI/$LABEL" 2>/dev/null || true
 launchctl unload "$PLIST_DST" 2>/dev/null || true
-launchctl load   "$PLIST_DST"
+launchctl load -w "$PLIST_DST"
 
-say "Done. Cron will fire daily at 07:00 local time."
-say "To generate a lesson right now: $REPO/scripts/generate-lesson.sh"
+LOADED=$(launchctl list | grep -c "$LABEL" || true)
+if [[ "$LOADED" != "1" ]]; then
+  warn "Expected exactly 1 launchd job for $LABEL, found $LOADED — check 'launchctl list | grep whetstone'."
+fi
+
+say "Done. One launchd job ($LABEL) → $REPO/scripts/generate-lesson.sh"
+say "Cron fires weekdays at 07:00 local time."
+say "Generate now: $REPO/scripts/generate-lesson.sh --force"
+say "Re-run this script after every '/plugin update' to adopt the new version."

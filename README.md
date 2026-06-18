@@ -76,6 +76,26 @@ See `docs/catalog-shape.md` to author new topics or swap in a custom catalog for
 
 TypeScript is primary, Ruby cycles in every 5th day by default. Both are configurable in `~/.whetstone/state.json`. Other languages can be added by writing a new template under `templates/` and extending the planner — out of scope for v1.
 
+## Updating
+
+After `/plugin update` pulls a new version, re-run the install script from the **updated** copy so the single launchd job repoints at it:
+
+```
+~/.claude/plugins/cache/n33kos/whetstone/<version>/scripts/install.sh
+```
+
+(Or from your clone: `~/whetstone/scripts/install.sh`.) The script is self-locating and fully idempotent — it tears down any existing job under the `com.whetstone.daily` label before loading, so updates never stack instances or leave an old version running. It verifies exactly one job is loaded and warns otherwise.
+
+## Lesson model
+
+Lesson generation runs the `claude` CLI headlessly with MCP servers disabled. The model is configurable, in precedence order:
+
+1. `WHETSTONE_CLAUDE_MODEL` env var
+2. `lesson_model` in `~/.whetstone/state.json`
+3. default: `sonnet`
+
+Sonnet is the fast, cheaper default and renders well-scoped lessons quickly. For deeper reasoning at higher token cost, set `"lesson_model": "opus"` in `state.json`. Generation timeout is 1200s, overridable via `WHETSTONE_CLAUDE_TIMEOUT`.
+
 ## Uninstall
 
 ```

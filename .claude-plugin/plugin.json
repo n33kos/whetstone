@@ -1,6 +1,6 @@
 {
   "name": "whetstone",
   "description": "A daily code-and-concept sharpening tool. Each morning generates one focused lesson directory — concept README, failing test, scaffold files whose structure mirrors how the concept manifests in real systems — in your primary language. Five to fifteen minutes per day. No stacking, no shaming, no perfectionism trap. Sibling to imprint (behavior) and ursula (voice); whetstone is the skill-and-knowledge layer.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "Nicholas Suski" }
 }

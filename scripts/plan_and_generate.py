@@ -434,20 +434,28 @@ def resolve_claude() -> str | None:
 
 
 CLAUDE_TIMEOUT_S = int(os.environ.get("WHETSTONE_CLAUDE_TIMEOUT", "1200"))
-CLAUDE_MODEL = os.environ.get("WHETSTONE_CLAUDE_MODEL", "sonnet")
 
 
-def call_claude(prompt: str) -> str | None:
+def resolve_model(state: dict) -> str:
+    """Model precedence: env override > state.json lesson_model > sonnet."""
+    return (
+        os.environ.get("WHETSTONE_CLAUDE_MODEL")
+        or state.get("lesson_model")
+        or "sonnet"
+    )
+
+
+def call_claude(prompt: str, model: str) -> str | None:
     claude_bin = resolve_claude()
     if claude_bin is None:
         return None
     # --strict-mcp-config with no --mcp-config disables every MCP server, so
-    # the headless run never blocks on plugin MCP health checks. Pin a fast
-    # model (sonnet by default) — lesson rendering is well-scoped and the
-    # default Opus session is slow enough to blow the timeout intermittently.
+    # the headless run never blocks on plugin MCP health checks. Model is
+    # configurable (state.json `lesson_model`, env override) — sonnet is the
+    # fast default; switch to opus for deeper reasoning at higher token cost.
     cmd = [claude_bin, "-p", "--strict-mcp-config"]
-    if CLAUDE_MODEL:
-        cmd += ["--model", CLAUDE_MODEL]
+    if model:
+        cmd += ["--model", model]
     cmd.append(prompt)
     try:
         r = subprocess.run(
@@ -557,7 +565,8 @@ def main() -> int:
     yesterday_note = (y_signal or {}).get("scratch_text") or None
     prompt = build_prompt(topic, sources, language, mode, today_dir, yesterday_note)
 
-    rendered = call_claude(prompt)
+    model = resolve_model(state)
+    rendered = call_claude(prompt, model)
     manifest = parse_manifest(rendered) if rendered else None
     if manifest is None:
         sys.stderr.write("Claude unavailable or manifest unparsable — writing fallback.\n")
