@@ -149,6 +149,13 @@ json.dump(d, open(p, "w"), indent=2)
 PY
 fi
 
+# ─── Stable cron launcher ────────────────────────────────────────────────
+# The plist points at this fixed path; the shim resolves the latest
+# installed plugin version at run time, so updates need no plist rewrite.
+say "Installing stable cron launcher at $STATE/run-latest.sh"
+cp "$REPO/templates/run-latest.sh" "$STATE/run-latest.sh"
+chmod +x "$STATE/run-latest.sh"
+
 # ─── launchd plist ───────────────────────────────────────────────────────
 say "Installing launchd plist at $PLIST_DST"
 mkdir -p "$(dirname "$PLIST_DST")"
@@ -176,7 +183,7 @@ if [[ "$LOADED" != "1" ]]; then
   warn "Expected exactly 1 launchd job for $LABEL, found $LOADED — check 'launchctl list | grep whetstone'."
 fi
 
-say "Done. One launchd job ($LABEL) → $REPO/scripts/generate-lesson.sh"
+say "Done. One launchd job ($LABEL) → $STATE/run-latest.sh (auto-tracks latest installed version)."
 say "Cron fires weekdays at 07:00 local time."
-say "Generate now: $REPO/scripts/generate-lesson.sh --force"
-say "Re-run this script after every '/plugin update' to adopt the new version."
+say "Generate now: $STATE/run-latest.sh --force"
+say "To update later, just run /whetstone:update — no manual steps."

@@ -9,7 +9,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>{{WHETSTONE_REPO}}/scripts/generate-lesson.sh</string>
+    <string>{{WHETSTONE_STATE}}/run-latest.sh</string>
   </array>
 
   <key>StartCalendarInterval</key>
