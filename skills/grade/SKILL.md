@@ -9,9 +9,13 @@ Grade a completed (or abandoned) lesson implementation, deliver the critique con
 
 ## Step 1 — Locate the lesson
 
-Default to today's lesson directory. Run `ls -d ~/.whetstone/lessons/$(date +%Y-%m-%d) 2>/dev/null` and save the result as `lesson_dir`.
+ALWAYS resolve the current date from the system, never from memory or conversation context — the model's notion of "today" drifts and is not trustworthy. Run `date +%Y-%m-%d` and save the result as `today`.
 
-If `lesson_dir` is empty, or the user named a different date, ask which lesson to grade and set `lesson_dir` accordingly.
+Target the latest exercise possible. Run `ls -d ~/.whetstone/lessons/$today 2>/dev/null` and save the result as `lesson_dir`.
+
+If `lesson_dir` is empty (today's lesson has not been generated yet), fall back to the newest lesson directory that exists: run `ls -d ~/.whetstone/lessons/*/ | sort | tail -1` and save that as `lesson_dir`.
+
+If the user named a specific date, use that date's directory instead and set `lesson_dir` accordingly.
 
 ## Step 2 — Read the work
 
