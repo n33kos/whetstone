@@ -457,9 +457,17 @@ def call_claude(prompt: str, model: str) -> str | None:
     if model:
         cmd += ["--model", model]
     cmd.append(prompt)
+    # Run from the whetstone state dir so the headless session's token usage
+    # is attributed to a single stable project bucket in the Claude Code logs.
+    # launchd starts the cron with cwd=/, which would otherwise dump every
+    # daily lesson's cost into the root-directory bucket and pollute
+    # per-directory cost analysis. STATE (~/.whetstone) always exists and does
+    # not move across plugin versions, unlike REPO which resolves to the
+    # versioned plugin cache dir at cron time.
     try:
         r = subprocess.run(
             cmd, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_S,
+            cwd=str(STATE),
         )
     except subprocess.TimeoutExpired:
         sys.stderr.write(f"claude CLI timed out after {CLAUDE_TIMEOUT_S}s\n")
